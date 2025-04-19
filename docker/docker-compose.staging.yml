@@ -1,7 +1,7 @@
 services:
   calculateur_staging:
     build:
-      context: ../calculateur
+      context: ..
       dockerfile: Dockerfile
     expose:
       - "8501"
