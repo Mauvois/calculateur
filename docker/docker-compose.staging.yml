@@ -1,0 +1,13 @@
+services:
+  calculateur_staging:
+    build:
+      context: ../calculateur
+      dockerfile: Dockerfile
+    expose:
+      - "8501"
+    networks:
+      - calculateur_staging_net
+
+networks:
+  calculateur_staging_net:
+    external: true
