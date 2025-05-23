@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  calculateur:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    ports:
+      - "80:8501"  # En prod, on expose sur 80 si tu veux un accès direct depuis le navigateur
+    restart: always
+    networks:
+      - calculateur_net
+
+networks:
+  calculateur_net:  # Pas de "external: true" → Docker le crée pour toi
