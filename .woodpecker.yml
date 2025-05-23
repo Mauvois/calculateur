@@ -1,8 +1,20 @@
 steps:
-  build_and_deploy:
+  deploy_staging:
     image: docker/compose:1.29.2
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     commands:
       - docker-compose -f docker/docker-compose.staging.yml -p datamap_calculateur down --volumes
       - docker-compose -f docker/docker-compose.staging.yml -p datamap_calculateur up -d --build
+    when:
+      branch: dev
+
+  deploy_prod:
+    image: docker/compose:1.29.2
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    commands:
+      - docker-compose -f docker/docker-compose.yml -p datamap_calculateur_prod down --volumes
+      - docker-compose -f docker/docker-compose.yml -p datamap_calculateur_prod up -d --build
+    when:
+      branch: main
