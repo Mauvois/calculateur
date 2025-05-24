@@ -2,11 +2,14 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-COPY requirements.txt .
+# Copier tout le contenu de l'application
+COPY . .
+
+# Installer les dépendances
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY calculateur.py .
-
+# Exposer le port
 EXPOSE 8501
 
-CMD ["streamlit", "run", "calculateur.py", "--server.port=8501", "--server.enableCORS=false", "--server.headless=true"]
+# Lancer l'application
+CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.enableCORS=false", "--server.headless=true"]
