@@ -15,7 +15,7 @@ steps:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     commands:
-      - docker-compose -f docker/docker-compose.yml -p datamap_calculateur_prod down --remove-orphans --rmi local || echo "warning: down failed"
+      - sh -c 'docker-compose -f docker/docker-compose.yml -p datamap_calculateur_prod down --remove-orphans --rmi local || echo "warning: down failed"'
       - docker-compose -f docker/docker-compose.yml -p datamap_calculateur_prod up -d --build --force-recreate
     when:
       event: push
