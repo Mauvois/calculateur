@@ -1,5 +1,5 @@
 # config.py
-"""Configuration et constantes pour le calculateur Datamap"""
+"""Configuration et constantes pour le calculateur Caribô"""
 
 # Constantes fiscales
 TAUX_IS = 0.25  # Taux d'impôt sur les sociétés (25%)
@@ -21,18 +21,25 @@ CATEGORIES_SERVICES = [
 
 # Types de clients pour les templates
 TYPES_CLIENTS = [
-    "EPCI / Intercommunalité",
-    "Petite commune rurale",
-    "Promoteur immobilier",
-    "Collectivité territoriale",
-    "Association"
+    "Commune",
+    "EPCI",
+    "Collectivité territoriale sup",
+    "Syndicat ou établissement public spécialisé",
+    "Administration de l'État",
+    "Promoteur ou aménageur immobilier",
+    "Agence de conseil",
+    "Acteur économique privé",
+    "Association",
+    "ONG"
 ]
 
 # Niveaux de complexité
 NIVEAUX_COMPLEXITE = {
-    "Faible": 0.0,    # Prix minimum
-    "Moyenne": 0.5,   # Prix médian
-    "Forte": 1.0      # Prix maximum
+    "Basique": 0.0,        # Projet simple, standard
+    "Standard": 0.25,      # Projet classique
+    "Intermédiaire": 0.5,  # Quelques spécificités
+    "Avancé": 0.75,        # Complexité technique élevée
+    "Expert": 1.0          # Projet très complexe, sur-mesure
 }
 
 # Charges fixes par défaut
@@ -68,7 +75,7 @@ SCENARIOS_CROISSANCE = {
 
 # Configuration de l'application
 APP_CONFIG = {
-    "title": "Calculateur Financier - Datamap",
+    "title": "Calculateur Financier - Caribô",
     "page_icon": "📊",
     "layout": "wide",
     "initial_sidebar_state": "expanded"

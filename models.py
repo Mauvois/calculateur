@@ -1,5 +1,5 @@
 # models.py
-"""Modèles de données et logique métier pour le calculateur Datamap"""
+"""Modèles de données et logique métier pour le calculateur Caribo"""
 
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional
@@ -24,7 +24,7 @@ class FacteurVariation:
 
 @dataclass
 class Service:
-    """Représente un service du catalogue Datamap"""
+    """Représente un service du catalogue Caribô"""
     id: str
     categorie: str
     nom: str
@@ -69,8 +69,18 @@ class ServiceSelectionne:
     prix_unitaire: float = 0.0
 
     def __post_init__(self):
+        # CORRECTION : Initialiser automatiquement les facteurs_custom avec les valeurs par défaut
+        # si ils n'existent pas et que le service a des facteurs_variation
+        if not self.facteurs_custom and self.service.facteurs_variation:
+            for facteur in self.service.facteurs_variation:
+                self.facteurs_custom[facteur.nom] = facteur.valeur_defaut
+
         if self.prix_unitaire == 0:
-            self.prix_unitaire = self.service.calculer_prix(self.complexite, self.facteurs_custom)
+            # Utiliser les facteurs_custom si disponibles, sinon la complexité
+            if self.facteurs_custom:
+                self.prix_unitaire = self.service.calculer_prix(facteurs_custom=self.facteurs_custom)
+            else:
+                self.prix_unitaire = self.service.calculer_prix(self.complexite)
 
     @property
     def prix_total(self) -> float:

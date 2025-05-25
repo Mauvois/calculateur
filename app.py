@@ -1,5 +1,5 @@
 # app.py
-"""Application principale du calculateur financier Datamap"""
+"""Application principale du calculateur financier Caribo"""
 
 import streamlit as st
 from config import APP_CONFIG, NIVEAUX_COMPLEXITE, TYPES_CLIENTS
@@ -82,10 +82,19 @@ with tabs[0]:
         )
 
     with col2:
+        # Gérer la compatibilité avec les anciens types de clients des templates
+        type_client_actuel = st.session_state.projet_courant.type_client
+        try:
+            # Essayer de trouver le type client dans la nouvelle liste
+            index_actuel = TYPES_CLIENTS.index(type_client_actuel) + 1 if type_client_actuel else 0
+        except ValueError:
+            # Si le type client n'existe pas dans la nouvelle liste, utiliser l'index 0 (vide)
+            index_actuel = 0
+
         st.session_state.projet_courant.type_client = st.selectbox(
             "Type de client",
             options=[""] + TYPES_CLIENTS,
-            index=0 if not st.session_state.projet_courant.type_client else TYPES_CLIENTS.index(st.session_state.projet_courant.type_client) + 1
+            index=index_actuel
         )
 
         # Mode d'affichage
@@ -115,7 +124,7 @@ with tabs[0]:
                         st.rerun()
 
                 with col2:
-                    if st.session_state.mode_avance:
+                    if st.session_state.mode_avance and service_sel.service.facteurs_variation:
                         # Mode avancé : sliders pour chaque facteur
                         st.write("**Facteurs de variation :**")
                         facteurs_modifies = False
@@ -139,12 +148,23 @@ with tabs[0]:
                             service_sel.facteurs_custom = nouveaux_facteurs
                             service_sel.prix_unitaire = service_sel.service.calculer_prix(facteurs_custom=nouveaux_facteurs)
                             st.rerun()
-                    else:
+
+                    elif st.session_state.mode_avance and not service_sel.service.facteurs_variation:
+                        # Mode avancé mais pas de facteurs : afficher un message
+                        st.info("Ce service n'a pas de facteurs de variation configurés")
+
+                    if not st.session_state.mode_avance or not service_sel.service.facteurs_variation:
                         # Mode simple : sélection de la complexité
+                        # Gérer la compatibilité avec les anciennes valeurs de complexité
+                        complexite_actuelle = service_sel.complexite
+                        if complexite_actuelle not in NIVEAUX_COMPLEXITE:
+                            # Si l'ancienne complexité n'existe plus, prendre la valeur médiane
+                            complexite_actuelle = list(NIVEAUX_COMPLEXITE.keys())[len(NIVEAUX_COMPLEXITE)//2]
+
                         nouvelle_complexite = st.select_slider(
                             "Complexité",
                             options=list(NIVEAUX_COMPLEXITE.keys()),
-                            value=service_sel.complexite,
+                            value=complexite_actuelle,
                             key=f"complexite_{idx}"
                         )
                         if nouvelle_complexite != service_sel.complexite:
@@ -200,16 +220,23 @@ with tabs[0]:
                 complexite_nouveau = st.select_slider(
                     "Complexité",
                     options=list(NIVEAUX_COMPLEXITE.keys()),
-                    value="Moyenne",
+                    value=list(NIVEAUX_COMPLEXITE.keys())[2],  # Prendre le 3ème élément (index 2) = niveau médian
                     key="complexite_nouveau"
                 )
 
             with col3:
                 if st.button("➕ Ajouter au projet", type="primary", use_container_width=True):
+                    # Initialiser les facteurs_custom avec les valeurs par défaut si le service en a
+                    facteurs_custom = {}
+                    if service_selectionne.facteurs_variation:
+                        for facteur in service_selectionne.facteurs_variation:
+                            facteurs_custom[facteur.nom] = facteur.valeur_defaut
+
                     st.session_state.projet_courant.ajouter_service(
                         service_selectionne,
                         complexite=complexite_nouveau,
-                        quantite=quantite_nouveau
+                        quantite=quantite_nouveau,
+                        facteurs_custom=facteurs_custom if facteurs_custom else None
                     )
                     st.success(f"Service '{service_selectionne.nom}' ajouté !")
                     st.rerun()

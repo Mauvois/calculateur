@@ -1,5 +1,5 @@
 # utils.py
-"""Fonctions utilitaires pour le calculateur Datamap"""
+"""Fonctions utilitaires pour le calculateur Caribo"""
 
 import streamlit as st
 import pandas as pd
