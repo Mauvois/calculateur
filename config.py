@@ -21,11 +21,16 @@ CATEGORIES_SERVICES = [
 
 # Types de clients pour les templates
 TYPES_CLIENTS = [
-    "EPCI / Intercommunalité",
-    "Petite commune rurale",
-    "Promoteur immobilier",
-    "Collectivité territoriale",
-    "Association"
+    "Commune",
+    "EPCI",
+    "Collectivité territoriale sup",
+    "Syndicat ou établissement public spécialisé",
+    "Administration de l'État",
+    "Promoteur ou aménageur immobilier",
+    "Agence de conseil",
+    "Acteur économique privé",
+    "Association",
+    "ONG"
 ]
 
 # Niveaux de complexité
