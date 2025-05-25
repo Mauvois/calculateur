@@ -221,10 +221,18 @@ with tabs[0]:
 
             with col3:
                 if st.button("➕ Ajouter au projet", type="primary", use_container_width=True):
+                    # CORRECTION : Initialiser les facteurs_custom si le service en a
+                    facteurs_custom = None
+                    if service_selectionne.facteurs_variation:
+                        facteurs_custom = {}
+                        for facteur in service_selectionne.facteurs_variation:
+                            facteurs_custom[facteur.nom] = facteur.valeur_defaut
+
                     st.session_state.projet_courant.ajouter_service(
                         service_selectionne,
                         complexite=complexite_nouveau,
-                        quantite=quantite_nouveau
+                        quantite=quantite_nouveau,
+                        facteurs_custom=facteurs_custom  # ← AJOUT DE CE PARAMÈTRE
                     )
                     st.success(f"Service '{service_selectionne.nom}' ajouté !")
                     st.rerun()
