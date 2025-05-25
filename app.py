@@ -205,7 +205,7 @@ with tabs[0]:
                 complexite_nouveau = st.select_slider(
                     "Complexité",
                     options=list(NIVEAUX_COMPLEXITE.keys()),
-                    value="Moyenne",
+                    value=list(NIVEAUX_COMPLEXITE.keys())[2],  # Prendre le 3ème élément (index 2) = niveau médian
                     key="complexite_nouveau"
                 )
 
