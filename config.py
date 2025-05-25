@@ -35,9 +35,11 @@ TYPES_CLIENTS = [
 
 # Niveaux de complexité
 NIVEAUX_COMPLEXITE = {
-    "Faible": 0.0,    # Prix minimum
-    "Moyenne": 0.5,   # Prix médian
-    "Forte": 1.0      # Prix maximum
+    "Basique": 0.0,        # Projet simple, standard
+    "Standard": 0.25,      # Projet classique
+    "Intermédiaire": 0.5,  # Quelques spécificités
+    "Avancé": 0.75,        # Complexité technique élevée
+    "Expert": 1.0          # Projet très complexe, sur-mesure
 }
 
 # Charges fixes par défaut
