@@ -121,6 +121,12 @@ with tabs[0]:
                         facteurs_modifies = False
                         nouveaux_facteurs = {}
 
+                        # CORRECTION : Si le service n'a pas de facteurs_custom mais a des facteurs_variation,
+                        # initialiser avec les valeurs par défaut
+                        if not service_sel.facteurs_custom and service_sel.service.facteurs_variation:
+                            for facteur in service_sel.service.facteurs_variation:
+                                service_sel.facteurs_custom[facteur.nom] = facteur.valeur_defaut
+
                         for facteur in service_sel.service.facteurs_variation:
                             valeur_actuelle = service_sel.facteurs_custom.get(facteur.nom, facteur.valeur_defaut)
                             nouvelle_valeur = st.slider(
@@ -140,17 +146,17 @@ with tabs[0]:
                             service_sel.prix_unitaire = service_sel.service.calculer_prix(facteurs_custom=nouveaux_facteurs)
                             st.rerun()
                     else:
-                        # Mode simple : sélection de la complexité
-                        nouvelle_complexite = st.select_slider(
-                            "Complexité",
-                            options=list(NIVEAUX_COMPLEXITE.keys()),
-                            value=service_sel.complexite,
-                            key=f"complexite_{idx}"
-                        )
-                        if nouvelle_complexite != service_sel.complexite:
-                            service_sel.complexite = nouvelle_complexite
-                            service_sel.prix_unitaire = service_sel.service.calculer_prix(complexite=nouvelle_complexite)
-                            st.rerun()
+                      # Mode simple : sélection de la complexité
+                      nouvelle_complexite = st.select_slider(
+                          "Complexité",
+                          options=list(NIVEAUX_COMPLEXITE.keys()),
+                          value=service_sel.complexite,
+                          key=f"complexite_{idx}"
+                      )
+                      if nouvelle_complexite != service_sel.complexite:
+                          service_sel.complexite = nouvelle_complexite
+                          service_sel.prix_unitaire = service_sel.service.calculer_prix(complexite=nouvelle_complexite)
+                          st.rerun()
 
                 with col3:
                     st.write(f"**Prix unitaire :**")
