@@ -1,5 +1,5 @@
 # app.py
-"""Application principale du calculateur financier Datamap"""
+"""Application principale du calculateur financier Caribo"""
 
 import streamlit as st
 from config import APP_CONFIG, NIVEAUX_COMPLEXITE, TYPES_CLIENTS
