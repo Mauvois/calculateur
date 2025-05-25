@@ -115,57 +115,52 @@ with tabs[0]:
                         st.rerun()
 
                 with col2:
-                  if st.session_state.mode_avance:
-                      # Mode avancé : sliders pour chaque facteur
-                      st.write("**Facteurs de variation :**")
+                    # S'assurer que les facteurs_custom sont initialisés si nécessaire
+                    if not service_sel.facteurs_custom and service_sel.service.facteurs_variation:
+                        for facteur in service_sel.service.facteurs_variation:
+                            service_sel.facteurs_custom[facteur.nom] = facteur.valeur_defaut
 
-                      # DEBUG : Ajouter ces lignes pour diagnostiquer
-                      st.write(f"🔍 DEBUG - Nombre de facteurs_variation: {len(service_sel.service.facteurs_variation)}")
-                      st.write(f"🔍 DEBUG - Facteurs_custom: {service_sel.facteurs_custom}")
-                      st.write(f"🔍 DEBUG - Facteurs_custom vide: {not service_sel.facteurs_custom}")
+                    if st.session_state.mode_avance and service_sel.service.facteurs_variation:
+                        # Mode avancé : sliders pour chaque facteur
+                        st.write("**Facteurs de variation :**")
+                        facteurs_modifies = False
+                        nouveaux_facteurs = {}
 
-                      # FORCER l'initialisation si nécessaire
-                      if not service_sel.facteurs_custom and service_sel.service.facteurs_variation:
-                          st.write("🔧 CORRECTION: Initialisation forcée des facteurs")
-                          for facteur in service_sel.service.facteurs_variation:
-                              service_sel.facteurs_custom[facteur.nom] = facteur.valeur_defaut
+                        for facteur in service_sel.service.facteurs_variation:
+                            valeur_actuelle = service_sel.facteurs_custom.get(facteur.nom, facteur.valeur_defaut)
+                            nouvelle_valeur = st.slider(
+                                facteur.nom,
+                                min_value=float(facteur.impact_min),
+                                max_value=float(facteur.impact_max),
+                                value=float(valeur_actuelle),
+                                key=f"facteur_{idx}_{facteur.nom}",
+                                help=facteur.description
+                            )
+                            nouveaux_facteurs[facteur.nom] = nouvelle_valeur
+                            if nouvelle_valeur != valeur_actuelle:
+                                facteurs_modifies = True
 
-                      facteurs_modifies = False
-                      nouveaux_facteurs = {}
+                        if facteurs_modifies:
+                            service_sel.facteurs_custom = nouveaux_facteurs
+                            service_sel.prix_unitaire = service_sel.service.calculer_prix(facteurs_custom=nouveaux_facteurs)
+                            st.rerun()
 
-                      if service_sel.service.facteurs_variation:
-                          for facteur in service_sel.service.facteurs_variation:
-                              valeur_actuelle = service_sel.facteurs_custom.get(facteur.nom, facteur.valeur_defaut)
-                              nouvelle_valeur = st.slider(
-                                  facteur.nom,
-                                  min_value=float(facteur.impact_min),
-                                  max_value=float(facteur.impact_max),
-                                  value=float(valeur_actuelle),
-                                  key=f"facteur_{idx}_{facteur.nom}",
-                                  help=facteur.description
-                              )
-                              nouveaux_facteurs[facteur.nom] = nouvelle_valeur
-                              if nouvelle_valeur != valeur_actuelle:
-                                  facteurs_modifies = True
+                    elif st.session_state.mode_avance and not service_sel.service.facteurs_variation:
+                        # Mode avancé mais pas de facteurs : afficher un message
+                        st.info("Ce service n'a pas de facteurs de variation configurés")
 
-                          if facteurs_modifies:
-                              service_sel.facteurs_custom = nouveaux_facteurs
-                              service_sel.prix_unitaire = service_sel.service.calculer_prix(facteurs_custom=nouveaux_facteurs)
-                              st.rerun()
-                      else:
-                          st.write("❌ Ce service n'a pas de facteurs de variation configurés")
-                  else:
-                      # Mode simple : sélection de la complexité
-                      nouvelle_complexite = st.select_slider(
-                          "Complexité",
-                          options=list(NIVEAUX_COMPLEXITE.keys()),
-                          value=service_sel.complexite,
-                          key=f"complexite_{idx}"
-                      )
-                      if nouvelle_complexite != service_sel.complexite:
-                          service_sel.complexite = nouvelle_complexite
-                          service_sel.prix_unitaire = service_sel.service.calculer_prix(complexite=nouvelle_complexite)
-                          st.rerun()
+                    if not st.session_state.mode_avance or not service_sel.service.facteurs_variation:
+                        # Mode simple : sélection de la complexité
+                        nouvelle_complexite = st.select_slider(
+                            "Complexité",
+                            options=list(NIVEAUX_COMPLEXITE.keys()),
+                            value=service_sel.complexite,
+                            key=f"complexite_{idx}"
+                        )
+                        if nouvelle_complexite != service_sel.complexite:
+                            service_sel.complexite = nouvelle_complexite
+                            service_sel.prix_unitaire = service_sel.service.calculer_prix(complexite=nouvelle_complexite)
+                            st.rerun()
 
                 with col3:
                     st.write(f"**Prix unitaire :**")
@@ -221,10 +216,9 @@ with tabs[0]:
 
             with col3:
                 if st.button("➕ Ajouter au projet", type="primary", use_container_width=True):
-                    # CORRECTION : Initialiser les facteurs_custom si le service en a
-                    facteurs_custom = None
+                    # Initialiser les facteurs_custom avec les valeurs par défaut si le service en a
+                    facteurs_custom = {}
                     if service_selectionne.facteurs_variation:
-                        facteurs_custom = {}
                         for facteur in service_selectionne.facteurs_variation:
                             facteurs_custom[facteur.nom] = facteur.valeur_defaut
 
@@ -232,7 +226,7 @@ with tabs[0]:
                         service_selectionne,
                         complexite=complexite_nouveau,
                         quantite=quantite_nouveau,
-                        facteurs_custom=facteurs_custom  # ← AJOUT DE CE PARAMÈTRE
+                        facteurs_custom=facteurs_custom if facteurs_custom else None
                     )
                     st.success(f"Service '{service_selectionne.nom}' ajouté !")
                     st.rerun()
