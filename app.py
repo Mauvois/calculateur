@@ -123,9 +123,9 @@ with tabs[0]:
 
                         # CORRECTION : Si le service n'a pas de facteurs_custom mais a des facteurs_variation,
                         # initialiser avec les valeurs par défaut
-                        if not service_sel.facteurs_custom and service_sel.service.facteurs_variation:
-                            for facteur in service_sel.service.facteurs_variation:
-                                service_sel.facteurs_custom[facteur.nom] = facteur.valeur_defaut
+                        # if not service_sel.facteurs_custom and service_sel.service.facteurs_variation:
+                        #     for facteur in service_sel.service.facteurs_variation:
+                        #         service_sel.facteurs_custom[facteur.nom] = facteur.valeur_defaut
 
                         for facteur in service_sel.service.facteurs_variation:
                             valeur_actuelle = service_sel.facteurs_custom.get(facteur.nom, facteur.valeur_defaut)

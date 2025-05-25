@@ -24,7 +24,7 @@ class FacteurVariation:
 
 @dataclass
 class Service:
-    """Représente un service du catalogue Datamap"""
+    """Représente un service du catalogue Caribô"""
     id: str
     categorie: str
     nom: str
