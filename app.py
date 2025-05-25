@@ -82,10 +82,19 @@ with tabs[0]:
         )
 
     with col2:
+        # Gérer la compatibilité avec les anciens types de clients des templates
+        type_client_actuel = st.session_state.projet_courant.type_client
+        try:
+            # Essayer de trouver le type client dans la nouvelle liste
+            index_actuel = TYPES_CLIENTS.index(type_client_actuel) + 1 if type_client_actuel else 0
+        except ValueError:
+            # Si le type client n'existe pas dans la nouvelle liste, utiliser l'index 0 (vide)
+            index_actuel = 0
+
         st.session_state.projet_courant.type_client = st.selectbox(
             "Type de client",
             options=[""] + TYPES_CLIENTS,
-            index=0 if not st.session_state.projet_courant.type_client else TYPES_CLIENTS.index(st.session_state.projet_courant.type_client) + 1
+            index=index_actuel
         )
 
         # Mode d'affichage
