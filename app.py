@@ -115,11 +115,6 @@ with tabs[0]:
                         st.rerun()
 
                 with col2:
-                    # S'assurer que les facteurs_custom sont initialisés si nécessaire
-                    if not service_sel.facteurs_custom and service_sel.service.facteurs_variation:
-                        for facteur in service_sel.service.facteurs_variation:
-                            service_sel.facteurs_custom[facteur.nom] = facteur.valeur_defaut
-
                     if st.session_state.mode_avance and service_sel.service.facteurs_variation:
                         # Mode avancé : sliders pour chaque facteur
                         st.write("**Facteurs de variation :**")
