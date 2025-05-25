@@ -155,10 +155,16 @@ with tabs[0]:
 
                     if not st.session_state.mode_avance or not service_sel.service.facteurs_variation:
                         # Mode simple : sélection de la complexité
+                        # Gérer la compatibilité avec les anciennes valeurs de complexité
+                        complexite_actuelle = service_sel.complexite
+                        if complexite_actuelle not in NIVEAUX_COMPLEXITE:
+                            # Si l'ancienne complexité n'existe plus, prendre la valeur médiane
+                            complexite_actuelle = list(NIVEAUX_COMPLEXITE.keys())[len(NIVEAUX_COMPLEXITE)//2]
+
                         nouvelle_complexite = st.select_slider(
                             "Complexité",
                             options=list(NIVEAUX_COMPLEXITE.keys()),
-                            value=service_sel.complexite,
+                            value=complexite_actuelle,
                             key=f"complexite_{idx}"
                         )
                         if nouvelle_complexite != service_sel.complexite:
