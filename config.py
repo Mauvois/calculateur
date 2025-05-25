@@ -1,5 +1,5 @@
 # config.py
-"""Configuration et constantes pour le calculateur Datamap"""
+"""Configuration et constantes pour le calculateur Caribô"""
 
 # Constantes fiscales
 TAUX_IS = 0.25  # Taux d'impôt sur les sociétés (25%)
@@ -68,7 +68,7 @@ SCENARIOS_CROISSANCE = {
 
 # Configuration de l'application
 APP_CONFIG = {
-    "title": "Calculateur Financier - Datamap",
+    "title": "Calculateur Financier - Caribô",
     "page_icon": "📊",
     "layout": "wide",
     "initial_sidebar_state": "expanded"

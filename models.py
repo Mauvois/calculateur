@@ -1,5 +1,5 @@
 # models.py
-"""Modèles de données et logique métier pour le calculateur Datamap"""
+"""Modèles de données et logique métier pour le calculateur Caribo"""
 
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional

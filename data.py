@@ -1,12 +1,12 @@
 # data.py
-"""Données des services et templates de projets pour le calculateur Datamap"""
+"""Données des services et templates de projets pour le calculateur Caribo"""
 
 from models import Service, FacteurVariation, Projet, ServiceSelectionne
 from typing import List, Dict
 
 
 def creer_catalogue_services() -> Dict[str, Service]:
-    """Crée et retourne le catalogue complet des services Datamap"""
+    """Crée et retourne le catalogue complet des services Caribo"""
 
     services = []
 
