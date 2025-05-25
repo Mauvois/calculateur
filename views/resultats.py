@@ -1,21 +1,21 @@
 # views/resultats.py
-"""Module pour l'onglet de résultats et analyses"""
+"""Module pour l'onglet de résultats et analyses - Version SAS adaptée"""
 
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 
+from config import OBJECTIFS_REMUNERATION, GRAPH_CONFIG
 from utils import (
     format_currency, format_percentage,
     creer_graphique_ca_evolution, creer_graphique_repartition,
     calculer_seuil_rentabilite
 )
-from config import GRAPH_CONFIG
 
 
 def render_resultats_tab():
-    """Affiche l'onglet des résultats et analyses"""
-    st.header("📊 Résultats & Analyses")
+    """Affiche l'onglet des résultats et analyses adapté SAS"""
+    st.header("📊 Résultats & Analyses - SAS Caribo")
 
     # Vérifier qu'il y a des prévisions
     if ('previsions_annuelles' not in st.session_state or
@@ -26,10 +26,71 @@ def render_resultats_tab():
     # Récupérer les données
     df_resultats = st.session_state.previsions_annuelles.get_dataframe_resultats()
 
-    # KPIs principaux
+    # === SECTION SAS : ANALYSE DE LA RÉMUNÉRATION ===
+    st.subheader("💰 Analyse de la rémunération SAS")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.write("**Objectifs de rémunération :**")
+        st.write(f"• Dividendes nets par associé : {format_currency(OBJECTIFS_REMUNERATION['dividendes_nets_par_associe'])}")
+        st.write(f"• Total dividendes nets (2 associés) : {format_currency(OBJECTIFS_REMUNERATION['total_dividendes_nets'])}")
+        st.write(f"• Dividendes bruts nécessaires : {format_currency(OBJECTIFS_REMUNERATION['dividendes_bruts_necessaires'])}")
+        st.write(f"• Bénéfice avant IS requis : {format_currency(OBJECTIFS_REMUNERATION['benefice_avant_is_necessaire'])}")
+
+    with col2:
+        # Vérification objectifs par année
+        st.write("**Atteinte des objectifs par année :**")
+        for _, row in df_resultats.iterrows():
+            annee = int(row["Année"])
+            benefice_brut = row["Résultat brut"]
+
+            if benefice_brut >= OBJECTIFS_REMUNERATION["benefice_avant_is_necessaire"]:
+                st.success(f"Année {annee} : ✅ Objectif atteint ({format_currency(benefice_brut)})")
+            else:
+                manque = OBJECTIFS_REMUNERATION["benefice_avant_is_necessaire"] - benefice_brut
+                st.warning(f"Année {annee} : ⚠️ Manque {format_currency(manque)}")
+
+    # Calcul détaillé de la rémunération possible
+    st.write("**Rémunération réalisable par année :**")
+
+    remuneration_data = []
+    for _, row in df_resultats.iterrows():
+        annee = int(row["Année"])
+        benefice_brut = row["Résultat brut"]
+
+        # Calcul IS (25%)
+        is_du = max(0, benefice_brut * 0.25)
+        benefice_apres_is = benefice_brut - is_du
+
+        # Calcul dividendes possibles (flat tax 30%)
+        dividendes_nets_possible = benefice_apres_is * 0.70  # 70% après flat tax
+        dividendes_nets_par_associe = dividendes_nets_possible / 2
+
+        remuneration_data.append({
+            "Année": annee,
+            "Bénéfice brut": benefice_brut,
+            "IS (25%)": is_du,
+            "Bénéfice après IS": benefice_apres_is,
+            "Dividendes nets possibles": dividendes_nets_possible,
+            "Net par associé": dividendes_nets_par_associe
+        })
+
+    df_remuneration = pd.DataFrame(remuneration_data)
+
+    # Formater pour affichage
+    df_remuneration_display = df_remuneration.copy()
+    for col in df_remuneration_display.columns:
+        if col != "Année":
+            df_remuneration_display[col] = df_remuneration_display[col].apply(lambda x: format_currency(x))
+
+    st.dataframe(df_remuneration_display, use_container_width=True, hide_index=True)
+
+    st.divider()
+
+    # === KPIs PRINCIPAUX ===
     st.subheader("🎯 Indicateurs clés")
 
-    # Métriques de l'année 1
     annee_1 = df_resultats.iloc[0]
     derniere_annee = df_resultats.iloc[-1]
 
@@ -43,19 +104,28 @@ def render_resultats_tab():
         )
 
     with col2:
+        benefice_annee_1 = remuneration_data[0]["Bénéfice brut"]
+        objectif_atteint = benefice_annee_1 >= OBJECTIFS_REMUNERATION["benefice_avant_is_necessaire"]
+        delta_objectif = benefice_annee_1 - OBJECTIFS_REMUNERATION["benefice_avant_is_necessaire"]
+
         st.metric(
-            "Résultat net Année 1",
-            format_currency(annee_1["Résultat net"]),
-            delta=format_percentage(annee_1["Taux de marge"]),
-            help="Résultat net après impôts"
+            "Bénéfice Année 1",
+            format_currency(benefice_annee_1),
+            delta=format_currency(delta_objectif),
+            delta_color="normal" if objectif_atteint else "inverse",
+            help="Bénéfice brut avant IS"
         )
 
     with col3:
-        ca_moyen = df_resultats["CA Total"].mean()
+        net_par_associe_annee_1 = remuneration_data[0]["Net par associé"]
+        delta_net = net_par_associe_annee_1 - OBJECTIFS_REMUNERATION["dividendes_nets_par_associe"]
+
         st.metric(
-            "CA moyen",
-            format_currency(ca_moyen),
-            help=f"Moyenne sur {len(df_resultats)} ans"
+            "Net par associé An1",
+            format_currency(net_par_associe_annee_1),
+            delta=format_currency(delta_net),
+            delta_color="normal" if delta_net >= 0 else "inverse",
+            help="Dividendes nets possibles par associé"
         )
 
     with col4:
@@ -97,17 +167,17 @@ def render_resultats_tab():
         }
     )
 
-    # Graphiques
+    # === GRAPHIQUES ===
     st.divider()
     st.subheader("📈 Visualisations")
 
     # Sélection du type de graphique
     type_graphique = st.selectbox(
         "Type de graphique",
-        ["Évolution CA et Résultat", "Répartition année 1", "Analyse comparative", "Ratios financiers"]
+        ["Évolution CA et Bénéfice", "Analyse rémunération SAS", "Capacité vs Objectifs", "Ratios financiers"]
     )
 
-    if type_graphique == "Évolution CA et Résultat":
+    if type_graphique == "Évolution CA et Bénéfice":
         fig = creer_graphique_ca_evolution(df_resultats)
         st.pyplot(fig)
 
@@ -117,42 +187,43 @@ def render_resultats_tab():
         else:
             st.warning("⚠️ Attention, le résultat net n'augmente pas sur la période")
 
-    elif type_graphique == "Répartition année 1":
-        fig = creer_graphique_repartition(df_resultats, annee=1)
-        st.pyplot(fig)
-
-    elif type_graphique == "Analyse comparative":
-        # Graphique comparatif des années
+    elif type_graphique == "Analyse rémunération SAS":
+        # Graphique spécifique à la rémunération SAS
         fig, ax = plt.subplots(figsize=GRAPH_CONFIG['figsize'])
 
-        annees = df_resultats["Année"].tolist()
-        x = range(len(annees))
-        width = 0.35
+        annees = [r["Année"] for r in remuneration_data]
+        benefices_bruts = [r["Bénéfice brut"] for r in remuneration_data]
+        nets_par_associe = [r["Net par associé"] for r in remuneration_data]
 
-        # Barres pour CA et charges
-        ca_bars = ax.bar([i - width/2 for i in x], df_resultats["CA Total"],
-                         width, label='CA Total', color=GRAPH_CONFIG['colors'][0])
-        charges_bars = ax.bar([i + width/2 for i in x], df_resultats["Charges fixes"],
-                              width, label='Charges fixes', color=GRAPH_CONFIG['colors'][3])
+        # Ligne objectif
+        objectif_line = [OBJECTIFS_REMUNERATION["benefice_avant_is_necessaire"]] * len(annees)
+        objectif_net_line = [OBJECTIFS_REMUNERATION["dividendes_nets_par_associe"]] * len(annees)
 
-        # Ligne pour le résultat net
+        ax.plot(annees, benefices_bruts, marker='o', linewidth=2,
+                label="Bénéfice brut", color=GRAPH_CONFIG['colors'][0])
+        ax.plot(annees, objectif_line, '--',
+                label=f"Objectif bénéfice ({format_currency(OBJECTIFS_REMUNERATION['benefice_avant_is_necessaire'])})",
+                color=GRAPH_CONFIG['colors'][3])
+
+        # Axe secondaire pour net par associé
         ax2 = ax.twinx()
-        resultat_line = ax2.plot(x, df_resultats["Résultat net"],
-                                color=GRAPH_CONFIG['colors'][2], marker='o',
-                                linewidth=2, label='Résultat net')
+        ax2.plot(annees, nets_par_associe, marker='s', linewidth=2,
+                 label="Net par associé", color=GRAPH_CONFIG['colors'][1])
+        ax2.plot(annees, objectif_net_line, '--',
+                 label=f"Objectif net ({format_currency(OBJECTIFS_REMUNERATION['dividendes_nets_par_associe'])})",
+                 color=GRAPH_CONFIG['colors'][4])
 
         # Mise en forme
-        ax.set_xlabel('Année')
-        ax.set_ylabel('CA et Charges (€)')
-        ax2.set_ylabel('Résultat net (€)')
-        ax.set_title('Analyse comparative par année')
-        ax.set_xticks(x)
-        ax.set_xticklabels(annees)
+        ax.set_xlabel("Année")
+        ax.set_ylabel("Bénéfice brut (€)")
+        ax2.set_ylabel("Net par associé (€)")
+        ax.set_title("Analyse de la rémunération SAS")
+        ax.grid(True, linestyle='--', alpha=0.7)
 
         # Légendes combinées
-        lines, labels = ax.get_legend_handles_labels()
+        lines1, labels1 = ax.get_legend_handles_labels()
         lines2, labels2 = ax2.get_legend_handles_labels()
-        ax2.legend(lines + lines2, labels + labels2, loc='upper left')
+        ax.legend(lines1 + lines2, labels1 + labels2, loc='upper left')
 
         # Formatage des axes
         ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f"{x/1000:.0f}k€"))
@@ -161,127 +232,31 @@ def render_resultats_tab():
         plt.tight_layout()
         st.pyplot(fig)
 
-    else:  # Ratios financiers
-        # Calculer les ratios
-        ratios_data = []
-        for _, row in df_resultats.iterrows():
-            ratios_data.append({
-                "Année": int(row["Année"]),
-                "Marge nette (%)": row["Taux de marge"] * 100,
-                "Charges / CA (%)": (row["Charges fixes"] / row["CA Total"] * 100) if row["CA Total"] > 0 else 0,
-                "Rentabilité (%)": (row["Résultat net"] / row["CA Total"] * 100) if row["CA Total"] > 0 else 0
-            })
-
-        df_ratios = pd.DataFrame(ratios_data)
-
-        # Graphique des ratios
+    elif type_graphique == "Capacité vs Objectifs":
+        # Analyse de la capacité de l'entreprise
         fig, ax = plt.subplots(figsize=GRAPH_CONFIG['figsize'])
 
-        for col in ["Marge nette (%)", "Charges / CA (%)", "Rentabilité (%)"]:
-            ax.plot(df_ratios["Année"], df_ratios[col], marker='o', linewidth=2, label=col)
+        # Données de capacité théorique vs réalité
+        annees = df_resultats["Année"].tolist()
+        ca_reel = df_resultats["CA Total"].tolist()
 
-        ax.set_xlabel("Année")
-        ax.set_ylabel("Pourcentage (%)")
-        ax.set_title("Évolution des ratios financiers")
-        ax.grid(True, linestyle='--', alpha=0.7)
-        ax.legend()
+        # Capacité théorique basée sur la croissance
+        ca_objectif = []
+        for i, annee in enumerate(annees):
+            if i == 0:
+                ca_objectif.append(ca_reel[0])
+            else:
+                # Supposer une croissance régulière
+                croissance_moy = 0.12  # 12% par défaut
+                ca_objectif.append(ca_objectif[0] * (1 + croissance_moy) ** (i))
 
-        plt.tight_layout()
-        st.pyplot(fig)
+        ax.bar([f"An{int(a)}" for a in annees], ca_reel,
+               label='CA réalisé', color=GRAPH_CONFIG['colors'][0], alpha=0.8)
+        ax.plot([f"An{int(a)}" for a in annees], ca_objectif,
+                marker='o', linewidth=2, color=GRAPH_CONFIG['colors'][2],
+                label='Tendance objectif')
 
-    # Analyse du seuil de rentabilité
-    st.divider()
-    st.subheader("💡 Analyse du seuil de rentabilité")
-
-    annee_analyse = st.selectbox("Année à analyser", df_resultats["Année"].tolist())
-    donnees_annee = df_resultats[df_resultats["Année"] == annee_analyse].iloc[0]
-
-    # Pour simplifier, on considère que toutes les charges sont fixes
-    seuil, marge_securite = calculer_seuil_rentabilite(
-        donnees_annee["CA Total"],
-        donnees_annee["Charges fixes"],
-        0  # Pas de charges variables dans ce modèle simplifié
-    )
-
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        if seuil != float('inf'):
-            st.metric("Seuil de rentabilité", format_currency(seuil))
-        else:
-            st.metric("Seuil de rentabilité", "N/A")
-
-    with col2:
-        if marge_securite >= 0:
-            st.metric("Marge de sécurité", format_percentage(marge_securite))
-        else:
-            st.metric("Marge de sécurité", "N/A")
-
-    with col3:
-        # Point mort en nombre de projets
-        if len(st.session_state.projets_annee_1) > 0:
-            ca_moyen_projet = donnees_annee["CA Projets"] / len(st.session_state.projets_annee_1)
-            if ca_moyen_projet > 0:
-                point_mort_projets = int(seuil / ca_moyen_projet) + 1
-                st.metric("Point mort", f"{point_mort_projets} projets")
-
-    # Insights et recommandations
-    st.divider()
-    st.subheader("🎓 Insights et recommandations")
-
-    # Analyse automatique
-    insights = []
-
-    # Croissance
-    if len(df_resultats) > 1:
-        taux_croissance_moyen = ((derniere_annee["CA Total"] / annee_1["CA Total"]) ** (1/(len(df_resultats)-1))) - 1
-        insights.append(f"📈 Taux de croissance annuel moyen : {format_percentage(taux_croissance_moyen)}")
-
-    # Rentabilité
-    marge_moyenne = df_resultats["Taux de marge"].mean()
-    if marge_moyenne > 0.2:
-        insights.append("✅ Excellente rentabilité moyenne (>20%)")
-    elif marge_moyenne > 0.1:
-        insights.append("👍 Bonne rentabilité moyenne (>10%)")
-    else:
-        insights.append("⚠️ Rentabilité à améliorer (<10%)")
-
-    # Charges
-    ratio_charges_moyen = (df_resultats["Charges fixes"] / df_resultats["CA Total"]).mean()
-    if ratio_charges_moyen < 0.3:
-        insights.append("✅ Charges fixes bien maîtrisées (<30% du CA)")
-    elif ratio_charges_moyen < 0.5:
-        insights.append("👍 Charges fixes raisonnables (<50% du CA)")
-    else:
-        insights.append("⚠️ Charges fixes élevées (>50% du CA)")
-
-    # Projets
-    nb_projets = len(st.session_state.projets_annee_1)
-    ca_moyen_projet = annee_1["CA Projets"] / nb_projets if nb_projets > 0 else 0
-    insights.append(f"📊 CA moyen par projet : {format_currency(ca_moyen_projet)}")
-
-    # Services avec maintenance
-    projets_avec_maintenance = sum(1 for p in st.session_state.projets_annee_1
-                                  if p.maintenance_annuelle_ht > 0)
-    if projets_avec_maintenance > 0:
-        ratio_maintenance = annee_1["CA Maintenance"] / annee_1["CA Total"]
-        insights.append(f"🔧 Revenus récurrents (maintenance) : {format_percentage(ratio_maintenance)} du CA")
-
-    # Afficher les insights
-    for insight in insights:
-        st.write(insight)
-
-    # Recommandations
-    st.write("\n**Recommandations :**")
-
-    if marge_moyenne < 0.15:
-        st.write("- 💡 Augmenter les prix ou réduire les charges pour améliorer la rentabilité")
-
-    if ratio_charges_moyen > 0.4:
-        st.write("- 💡 Optimiser les charges fixes (négociation loyers, mutualisation...)")
-
-    if projets_avec_maintenance < nb_projets * 0.3:
-        st.write("- 💡 Développer plus de projets avec maintenance pour des revenus récurrents")
-
-    if nb_projets < 20:
-        st.write("- 💡 Diversifier la base clients pour réduire les risques")
+        # Ligne objectif minimum
+        ca_min_objectif = [OBJECTIFS_REMUNERATION["benefice_avant_is_necessaire"] + 15000] * len(annees)  # +15k charges
+        ax.axhline(y=ca_min_objectif[0], color=GRAPH_CONFIG['colors'][3],
+                   linestyle='--', label=f'CA minimum pour objectif')

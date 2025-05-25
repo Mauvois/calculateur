@@ -1,54 +1,117 @@
 # views/previsions.py
-"""Module pour l'onglet de prévisions annuelles"""
+"""Module pour l'onglet de prévisions annuelles - Version SAS 2 associés"""
 
 import streamlit as st
 import pandas as pd
 from datetime import datetime
 from typing import List
 
-from config import SCENARIOS_CROISSANCE, CHARGES_FIXES_DEFAUT
+from config import SCENARIOS_CROISSANCE, CHARGES_FIXES_DEFAUT, OBJECTIFS_REMUNERATION, SIMULATION_PARAMS
 from models import Projet, PrevisionAnnuelle, Previsions
 from utils import format_currency, format_percentage
 
 
 def render_previsions_tab():
-    """Affiche l'onglet des prévisions annuelles"""
-    st.header("📈 Prévisions annuelles")
-    st.markdown("Construisez votre plan d'affaires en ajoutant des projets et en définissant vos charges.")
+    """Affiche l'onglet des prévisions annuelles adapté à votre SAS"""
+    st.header("📈 Prévisions annuelles - SAS Caribo")
+    st.markdown("Construisez votre plan d'affaires basé sur votre réalité : **2 associés, projets géomatique/data spatiale**")
 
-    # Initialisation des prévisions si nécessaire
+    # Initialisation
     if 'previsions_annuelles' not in st.session_state:
         st.session_state.previsions_annuelles = Previsions()
         st.session_state.projets_annee_1 = []
 
-    # Section 1 : Gestion des projets de l'année 1
-    st.subheader("1. Projets prévus pour l'année 1")
+    # Section objectifs de rémunération
+    st.subheader("🎯 Objectifs de rémunération")
+
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Objectif net/associé", format_currency(OBJECTIFS_REMUNERATION["dividendes_nets_par_associe"]))
+    with col2:
+        st.metric("Total dividendes nets", format_currency(OBJECTIFS_REMUNERATION["total_dividendes_nets"]))
+    with col3:
+        st.metric("Dividendes bruts nécessaires", format_currency(OBJECTIFS_REMUNERATION["dividendes_bruts_necessaires"]))
+    with col4:
+        st.metric("Bénéfice avant IS requis", format_currency(OBJECTIFS_REMUNERATION["benefice_avant_is_necessaire"]))
+
+    st.info("💡 **Calcul SAS** : Flat tax 30% (17,2% prélèvements sociaux + 12,8% IR) + IS 25%")
+
+    st.divider()
+
+    # Section scénarios
+    st.subheader("📊 Scénarios de développement")
+
+    scenario_choisi = st.selectbox(
+        "Choisissez votre scénario",
+        ["Personnalisé"] + list(SCENARIOS_CROISSANCE.keys()),
+        help="Scénarios adaptés à votre activité de conseil en géomatique"
+    )
+
+    if scenario_choisi != "Personnalisé":
+        scenario = SCENARIOS_CROISSANCE[scenario_choisi]
+
+        # Affichage du scénario
+        col1, col2 = st.columns([2, 1])
+
+        with col1:
+            st.write(f"**{scenario_choisi}** : {scenario['description']}")
+            st.write(f"**CA objectif année 1** : {format_currency(scenario['ca_objectif_annee_1'])}")
+            st.write(f"**Croissance annuelle** : {format_percentage(scenario['taux_croissance'])}")
+
+            # Mix de projets
+            st.write("**Mix de projets :**")
+            total_ca_mix = 0
+            for type_projet, details in scenario['mix_projets'].items():
+                ca_type = details['nb'] * details['ca_moyen']
+                total_ca_mix += ca_type
+                st.write(f"- {details['description']} = {format_currency(ca_type)}")
+
+            st.write(f"**Total CA mix** : {format_currency(total_ca_mix)}")
+
+        with col2:
+            # Métriques du scénario
+            benefice_prevu = scenario['ca_objectif_annee_1'] - scenario['charges_fixes_initiales']
+            taux_marge = benefice_prevu / scenario['ca_objectif_annee_1'] if scenario['ca_objectif_annee_1'] > 0 else 0
+
+            st.metric("Bénéfice brut prévu", format_currency(benefice_prevu))
+            st.metric("Taux de marge", format_percentage(taux_marge))
+
+            # Vérification objectif
+            if benefice_prevu >= OBJECTIFS_REMUNERATION["benefice_avant_is_necessaire"]:
+                st.success("✅ Objectif rémunération atteignable")
+            else:
+                manque = OBJECTIFS_REMUNERATION["benefice_avant_is_necessaire"] - benefice_prevu
+                st.warning(f"⚠️ Manque {format_currency(manque)} pour l'objectif")
+
+        # Bouton pour appliquer le scénario
+        if st.button(f"🚀 Appliquer le scénario {scenario_choisi}", type="primary"):
+            appliquer_scenario(scenario_choisi, scenario)
+            st.success(f"Scénario {scenario_choisi} appliqué !")
+            st.rerun()
+
+    st.divider()
+
+    # Section projets personnalisés
+    st.subheader("💼 Vos projets de l'année 1")
 
     col1, col2 = st.columns([3, 1])
 
     with col1:
-        # Option pour ajouter le projet en cours
-        if st.button("➕ Ajouter le projet en cours aux prévisions", type="primary"):
+        if st.button("➕ Ajouter le projet en cours aux prévisions", type="secondary"):
             if st.session_state.projet_courant and st.session_state.projet_courant.services:
                 projet_copie = st.session_state.projet_courant.dupliquer()
                 st.session_state.projets_annee_1.append(projet_copie)
                 st.success(f"Projet '{projet_copie.nom}' ajouté aux prévisions !")
+                st.rerun()
             else:
                 st.error("Le projet en cours est vide. Ajoutez des services d'abord.")
 
     with col2:
-        # Bouton pour charger un scénario type
-        scenario_type = st.selectbox(
-            "Charger un scénario type",
-            ["Personnalisé"] + list(SCENARIOS_CROISSANCE.keys())
-        )
+        if st.button("🗑️ Vider tous les projets"):
+            st.session_state.projets_annee_1 = []
+            st.rerun()
 
-        if scenario_type != "Personnalisé":
-            if st.button("Appliquer le scénario", key="apply_scenario"):
-                charger_scenario_type(scenario_type)
-                st.rerun()
-
-    # Affichage des projets ajoutés
+    # Affichage des projets
     if st.session_state.projets_annee_1:
         st.write(f"**{len(st.session_state.projets_annee_1)} projets ajoutés**")
 
@@ -61,11 +124,8 @@ def render_previsions_tab():
 
                 with col1:
                     st.write(f"**Client :** {projet.client}")
+                    st.write(f"**Type :** {projet.type_client}")
                     st.write(f"**Services :** {len(projet.services)}")
-
-                    # Détail des services
-                    for service in projet.services:
-                        st.write(f"- {service.service.nom} ({service.quantite}x)")
 
                 with col2:
                     st.metric("Total HT", format_currency(projet.total_ht))
@@ -73,14 +133,14 @@ def render_previsions_tab():
                         st.metric("Maintenance/an", format_currency(projet.maintenance_annuelle_ht))
 
                 with col3:
-                    # Nombre de fois ce projet dans l'année
+                    # Multiplicateur projet
                     multiplicateur = st.number_input(
-                        "Nombre de fois",
+                        "Nb projets similaires/an",
                         min_value=1,
-                        max_value=10,
+                        max_value=5,
                         value=1,
                         key=f"mult_projet_{idx}",
-                        help="Combien de fois ce type de projet sera réalisé dans l'année"
+                        help="Combien de projets similaires dans l'année"
                     )
 
                     if st.button("🗑️", key=f"del_projet_{idx}"):
@@ -90,213 +150,147 @@ def render_previsions_tab():
                 total_ca_projets += projet.total_ht * multiplicateur
                 total_maintenance += projet.maintenance_annuelle_ht * multiplicateur
 
-        # Résumé
+        # Résumé financier
         st.divider()
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3, col4 = st.columns(4)
+
         with col1:
-            st.metric("CA Projets année 1", format_currency(total_ca_projets))
+            st.metric("CA Projets", format_currency(total_ca_projets))
         with col2:
-            st.metric("Maintenance année 1", format_currency(total_maintenance))
+            st.metric("Maintenance", format_currency(total_maintenance))
         with col3:
-            st.metric("CA Total année 1", format_currency(total_ca_projets + total_maintenance))
+            ca_total = total_ca_projets + total_maintenance
+            st.metric("CA Total", format_currency(ca_total))
+        with col4:
+            if ca_total >= OBJECTIFS_REMUNERATION["benefice_avant_is_necessaire"]:
+                st.success("🎯 Objectif OK")
+            else:
+                st.warning("⚠️ Sous objectif")
 
     else:
-        st.info("Aucun projet ajouté. Utilisez le bouton ci-dessus ou chargez un scénario type.")
+        st.info("Aucun projet ajouté. Utilisez les scénarios ou ajoutez vos projets manuellement.")
 
-    # Section 2 : Charges fixes
+    # Section charges et paramètres
     st.divider()
-    st.subheader("2. Charges fixes annuelles")
+    st.subheader("💰 Charges fixes et paramètres")
 
     col1, col2 = st.columns(2)
 
     with col1:
-        st.session_state.charges_fixes["loyer"] = st.number_input(
-            "Loyer / Bureau (€/an)",
-            min_value=0,
-            max_value=50000,
-            value=st.session_state.charges_fixes.get("loyer", CHARGES_FIXES_DEFAUT["loyer"]),
-            step=100,
-            help="Charges locatives annuelles"
-        )
+        st.write("**Charges fixes annuelles :**")
+        total_charges = 0
+        for nom, valeur in CHARGES_FIXES_DEFAUT.items():
+            nouvelle_valeur = st.number_input(
+                nom.replace("_", " ").title(),
+                min_value=0,
+                value=valeur,
+                step=100,
+                key=f"charge_{nom}"
+            )
+            st.session_state.charges_fixes = st.session_state.charges_fixes or {}
+            st.session_state.charges_fixes[nom] = nouvelle_valeur
+            total_charges += nouvelle_valeur
 
-        st.session_state.charges_fixes["logiciels"] = st.number_input(
-            "Logiciels / Outils (€/an)",
-            min_value=0,
-            max_value=20000,
-            value=st.session_state.charges_fixes.get("logiciels", CHARGES_FIXES_DEFAUT["logiciels"]),
-            step=100,
-            help="Licences et abonnements"
-        )
-
-        st.session_state.charges_fixes["deplacements"] = st.number_input(
-            "Déplacements (€/an)",
-            min_value=0,
-            max_value=20000,
-            value=st.session_state.charges_fixes.get("deplacements", CHARGES_FIXES_DEFAUT["deplacements"]),
-            step=100,
-            help="Frais de déplacement et missions"
-        )
+        st.metric("**Total charges fixes**", format_currency(total_charges))
 
     with col2:
-        st.session_state.charges_fixes["materiel"] = st.number_input(
-            "Matériel (€/an)",
-            min_value=0,
-            max_value=20000,
-            value=st.session_state.charges_fixes.get("materiel", CHARGES_FIXES_DEFAUT["materiel"]),
-            step=100,
-            help="Matériel informatique et bureautique"
-        )
+        st.write("**Paramètres de projection :**")
 
-        st.session_state.charges_fixes["admin"] = st.number_input(
-            "Admin / Compta (€/an)",
-            min_value=0,
-            max_value=20000,
-            value=st.session_state.charges_fixes.get("admin", CHARGES_FIXES_DEFAUT["admin"]),
-            step=100,
-            help="Frais administratifs et comptables"
-        )
+        nb_annees = st.slider("Nombre d'années", 1, 5, 3)
 
-        # Total des charges
-        total_charges = sum(st.session_state.charges_fixes.values())
-        st.metric("Total charges fixes", format_currency(total_charges))
-
-    # Section 3 : Paramètres de projection
-    st.divider()
-    st.subheader("3. Paramètres de projection")
-
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        nb_annees = st.slider(
-            "Nombre d'années",
-            min_value=1,
-            max_value=5,
-            value=3,
-            help="Période de projection"
-        )
-
-    with col2:
         taux_croissance = st.slider(
             "Taux de croissance annuel",
-            min_value=0.0,
-            max_value=0.5,
-            value=0.15,
-            step=0.05,
-            format="%.0f%%",
-            help="Croissance du CA année après année"
+            0.0, 0.3, 0.12,
+            step=0.01,
+            format="%.0f%%"
         )
 
-    with col3:
         taux_inflation = st.slider(
             "Inflation des charges",
-            min_value=0.0,
-            max_value=0.1,
-            value=0.02,
-            step=0.01,
-            format="%.0f%%",
-            help="Augmentation annuelle des charges"
+            0.0, 0.05, 0.025,
+            step=0.005,
+            format="%.1f%%"
         )
 
-    # Bouton de génération des prévisions
-    if st.button("🔮 Générer les prévisions", type="primary"):
+    # Génération des prévisions
+    st.divider()
+
+    col1, col2 = st.columns([2, 1])
+
+    with col1:
+        if st.button("🔮 Générer les prévisions", type="primary", use_container_width=True):
+            if st.session_state.projets_annee_1:
+                generer_previsions_sas(nb_annees, taux_croissance, taux_inflation)
+                st.success("Prévisions générées ! Consultez l'onglet 'Résultats & Analyses'")
+                st.rerun()
+            else:
+                st.error("Ajoutez au moins un projet avant de générer les prévisions.")
+
+    with col2:
+        # Simulation express
         if st.session_state.projets_annee_1:
-            generer_previsions(nb_annees, taux_croissance, taux_inflation)
-            st.success("Prévisions générées ! Consultez l'onglet 'Résultats & Analyses'")
-        else:
-            st.error("Ajoutez au moins un projet avant de générer les prévisions.")
+            ca_annee_1 = sum(p.total_ht * st.session_state.get(f"mult_projet_{i}", 1)
+                           for i, p in enumerate(st.session_state.projets_annee_1))
+            benefice_estime = ca_annee_1 - total_charges
+
+            st.write("**Simulation express :**")
+            st.write(f"CA année 1 : {format_currency(ca_annee_1)}")
+            st.write(f"Bénéfice estimé : {format_currency(benefice_estime)}")
+
+            if benefice_estime >= OBJECTIFS_REMUNERATION["benefice_avant_is_necessaire"]:
+                st.success("🎯 Objectif atteignable")
+            else:
+                st.warning("⚠️ Revoir le mix projets")
 
 
-def charger_scenario_type(scenario_nom: str):
-    """Charge un scénario type avec des projets prédéfinis"""
-    scenario = SCENARIOS_CROISSANCE[scenario_nom]
-
+def appliquer_scenario(nom_scenario: str, scenario: dict):
+    """Applique un scénario prédéfini"""
     # Vider les projets actuels
     st.session_state.projets_annee_1 = []
 
-    # Créer des projets types selon le scénario
-    if scenario_nom == "Prudent":
-        # 15 projets : mix de petits projets
-        # 5 audits simples
-        for i in range(5):
-            projet = Projet(nom=f"Audit commune {i+1}", client=f"Commune {i+1}", type_client="Petite commune rurale")
-            projet.ajouter_service(
-                st.session_state.catalogue_services["audit_intelligence_spatiale"],
-                complexite="Faible",
-                quantite=1
+    # Créer des projets types basés sur le mix
+    for type_projet, details in scenario['mix_projets'].items():
+        for i in range(details['nb']):
+            # Créer un projet type
+            nom_projet = f"{type_projet.replace('_', ' ').title()} {i+1}"
+            projet = Projet(
+                nom=nom_projet,
+                client=f"Client {type_projet} {i+1}",
+                type_client="À définir"
             )
+
+            # Ajouter un service générique avec le bon montant
+            if st.session_state.catalogue_services:
+                # Prendre le premier service disponible comme base
+                service_base = list(st.session_state.catalogue_services.values())[0]
+
+                # Calculer la complexité pour avoir le bon prix
+                prix_cible = details['ca_moyen']
+                if prix_cible <= service_base.prix_min:
+                    complexite = "Très faible" if "Très faible" in ["Très faible", "Faible", "Moyenne", "Forte", "Très forte"] else "Faible"
+                elif prix_cible >= service_base.prix_max:
+                    complexite = "Très forte" if "Très forte" in ["Très faible", "Faible", "Moyenne", "Forte", "Très forte"] else "Forte"
+                else:
+                    complexite = "Moyenne"
+
+                # Calculer la quantité nécessaire
+                prix_unitaire = service_base.calculer_prix(complexite=complexite)
+                quantite = max(1, round(prix_cible / prix_unitaire))
+
+                projet.ajouter_service(service_base, complexite=complexite, quantite=quantite)
+
             st.session_state.projets_annee_1.append(projet)
 
-        # 5 analyses spatiales
-        for i in range(5):
-            projet = Projet(nom=f"Analyse spatiale {i+1}", client=f"Client {i+1}", type_client="")
-            projet.ajouter_service(
-                st.session_state.catalogue_services["analyse_spatiale"],
-                complexite="Moyenne",
-                quantite=1
-            )
-            st.session_state.projets_annee_1.append(projet)
-
-        # 5 formations
-        for i in range(5):
-            projet = Projet(nom=f"Formation {i+1}", client=f"Client {i+1}", type_client="")
-            projet.ajouter_service(
-                st.session_state.catalogue_services["formation"],
-                complexite="Moyenne",
-                quantite=1
-            )
-            st.session_state.projets_annee_1.append(projet)
-
-    elif scenario_nom == "Réaliste":
-        # 25 projets : mix équilibré
-        # Charger les templates et les multiplier
-        templates = ["commune", "promoteur", "association"]
-        for template in templates:
-            for i in range(3):
-                projet = st.session_state.templates_projets[template].dupliquer()
-                projet.nom = f"{projet.nom} - {i+1}"
-                st.session_state.projets_annee_1.append(projet)
-
-        # Ajouter quelques projets moyens
-        for i in range(10):
-            projet = Projet(nom=f"Projet moyen {i+1}", client=f"Client {i+1}", type_client="")
-            projet.ajouter_service(
-                st.session_state.catalogue_services["dashboard"],
-                complexite="Moyenne",
-                quantite=1
-            )
-            st.session_state.projets_annee_1.append(projet)
-
-    elif scenario_nom == "Ambitieux":
-        # 40 projets : beaucoup de gros projets
-        # Plusieurs gros projets type EPCI et CTM
-        for i in range(5):
-            projet = st.session_state.templates_projets["epci"].dupliquer()
-            projet.nom = f"EPCI - Projet {i+1}"
-            st.session_state.projets_annee_1.append(projet)
-
-        for i in range(3):
-            projet = st.session_state.templates_projets["ctm"].dupliquer()
-            projet.nom = f"Collectivité - Projet {i+1}"
-            st.session_state.projets_annee_1.append(projet)
-
-        # Projets moyens et petits pour compléter
-        for i in range(20):
-            projet = st.session_state.templates_projets["promoteur"].dupliquer()
-            projet.nom = f"Promoteur - Projet {i+1}"
-            st.session_state.projets_annee_1.append(projet)
-
-    # Mettre à jour les charges selon le scénario
-    charges_base = scenario["charges_fixes_initiales"]
-    ratio = charges_base / sum(CHARGES_FIXES_DEFAUT.values())
-
+    # Appliquer les charges du scénario
+    ratio_charges = scenario['charges_fixes_initiales'] / sum(CHARGES_FIXES_DEFAUT.values())
     for charge, valeur in CHARGES_FIXES_DEFAUT.items():
-        st.session_state.charges_fixes[charge] = int(valeur * ratio)
+        st.session_state.charges_fixes[charge] = int(valeur * ratio_charges)
 
 
-def generer_previsions(nb_annees: int, taux_croissance: float, taux_inflation: float):
-    """Génère les prévisions sur plusieurs années"""
-    # Réinitialiser les prévisions
-    st.session_state.previsions_annuelles = Previsions()
+def generer_previsions_sas(nb_annees: int, taux_croissance: float, taux_inflation: float):
+    """Génère les prévisions sur plusieurs années pour la SAS"""
+    # Réinitialiser
+    st.session_state.previsions_annuelles = Previsions(nom_scenario="SAS Caribo")
 
     # Calculer les multiplicateurs pour chaque projet
     projets_avec_multiplicateurs = []
@@ -310,11 +304,11 @@ def generer_previsions(nb_annees: int, taux_croissance: float, taux_inflation: f
         annee=1,
         projets=projets_avec_multiplicateurs,
         charges_fixes=st.session_state.charges_fixes.copy(),
-        taux_croissance=0  # Pas de croissance en année 1
+        taux_croissance=0
     )
     st.session_state.previsions_annuelles.ajouter_annee(prevision_annee_1)
 
-    # Générer les projections pour les années suivantes
+    # Années suivantes avec adaptation SAS
     st.session_state.previsions_annuelles.generer_projections(
         nb_annees=nb_annees,
         taux_croissance=taux_croissance,

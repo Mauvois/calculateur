@@ -51,25 +51,66 @@ CHARGES_FIXES_DEFAUT = {
     "admin": 1500
 }
 
+# Charges fixes détaillées pour SAS
+CHARGES_FIXES_DETAILLEES = {
+    "salaires_dirigeants": 0,          # Rémunération via dividendes
+    "charges_sociales_minimales": 0,   # Pas de salaires = pas de charges
+    "loyer_bureau": 3000,
+    "logiciels_licences": 2000,        # Outils géomatique/SIG coûteux
+    "materiel_informatique": 1500,     # Amortissement annuel
+    "deplacements_missions": 2500,     # Missions terrain
+    "assurances_rc": 800,              # RC pro + autres
+    "comptabilite_juridique": 2000,    # Expert-comptable + formalités SAS
+    "communication_marketing": 1000,   # Site web, comm
+    "frais_bancaires": 200,
+    "autres_frais": 500
+}
+
+OBJECTIFS_REMUNERATION = {
+    "dividendes_nets_par_associe": 36000,  # 36k€ nets par associé
+    "nb_associes": 2,
+    "total_dividendes_nets": 72000,
+    "dividendes_bruts_necessaires": 103000,  # Avec flat tax 30%
+    "benefice_avant_is_necessaire": 137000   # Avec IS 25%
+}
+
 # Scénarios de croissance
 SCENARIOS_CROISSANCE = {
     "Prudent": {
-        "description": "Croissance modeste, approche conservatrice",
-        "taux_croissance": 0.10,
-        "nb_projets_annee_1": 15,
-        "taux_inflation_charges": 0.02
+        "description": "Démarrage progressif, consolidation de l'activité",
+        "ca_objectif_annee_1": 160000,  # Pour 137k€ bénéfice + charges
+        "taux_croissance": 0.08,        # 8% croissance/an
+        "taux_inflation_charges": 0.02,
+        "mix_projets": {
+            "gros_projets": {"nb": 1, "ca_moyen": 50000, "description": "1 gros projet (40-60k€)"},
+            "projets_moyens": {"nb": 3, "ca_moyen": 20000, "description": "3 projets moyens (15-25k€)"},
+            "petits_projets": {"nb": 5, "ca_moyen": 10000, "description": "5 petits projets (5-15k€)"}
+        },
+        "charges_fixes_initiales": 12000
     },
     "Réaliste": {
-        "description": "Croissance progressive et maîtrisée",
-        "taux_croissance": 0.20,
-        "nb_projets_annee_1": 25,
-        "taux_inflation_charges": 0.03
+        "description": "Développement équilibré avec montée en gamme",
+        "ca_objectif_annee_1": 200000,
+        "taux_croissance": 0.12,        # 12% croissance/an
+        "taux_inflation_charges": 0.025,
+        "mix_projets": {
+            "gros_projets": {"nb": 2, "ca_moyen": 55000, "description": "2 gros projets (45-65k€)"},
+            "projets_moyens": {"nb": 3, "ca_moyen": 25000, "description": "3 projets moyens (20-30k€)"},
+            "petits_projets": {"nb": 2, "ca_moyen": 12500, "description": "2 petits projets (10-15k€)"}
+        },
+        "charges_fixes_initiales": 15000
     },
     "Ambitieux": {
-        "description": "Forte croissance et développement rapide",
-        "taux_croissance": 0.35,
-        "nb_projets_annee_1": 40,
-        "taux_inflation_charges": 0.05
+        "description": "Croissance forte avec projets premium",
+        "ca_objectif_annee_1": 280000,
+        "taux_croissance": 0.18,        # 18% croissance/an
+        "taux_inflation_charges": 0.03,
+        "mix_projets": {
+            "gros_projets": {"nb": 3, "ca_moyen": 60000, "description": "3 gros projets premium (50-70k€)"},
+            "projets_moyens": {"nb": 3, "ca_moyen": 30000, "description": "3 projets moyens (25-35k€)"},
+            "petits_projets": {"nb": 1, "ca_moyen": 10000, "description": "1 petit projet (complément)"}
+        },
+        "charges_fixes_initiales": 18000
     }
 }
 
@@ -97,4 +138,14 @@ PDF_CONFIG = {
     "font_size": 10,
     "title_size": 16,
     "subtitle_size": 14
+}
+
+# Paramètres de simulation
+SIMULATION_PARAMS = {
+    "duree_gros_projet_mois": 8,      # 6-10 mois
+    "duree_projet_moyen_mois": 4,     # 3-5 mois
+    "duree_petit_projet_mois": 2,     # 1-3 mois
+    "capacite_simultanee_annee_1": 1, # 1 projet à la fois
+    "capacite_simultanee_annee_3": 2, # 2 projets simultanés en année 3
+    "gain_efficacite_annuel": 0.10   # 10% de gain d'efficacité par an
 }
